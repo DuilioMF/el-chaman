@@ -94,3 +94,43 @@ test('Cuaderno no guarda nada sin consentimiento explícito',async()=>{
   assert.equal(await page.evaluate(()=>localStorage.getItem('elchaman.reflection.1.v1')),null);
  }finally{await context.close()}
 });
+
+test('Omitir el nombre se respeta entre visitas y el diálogo contiene el foco',async()=>{
+ const {context,page}=await openMobile();
+ try{
+  assert.equal(await page.locator('header').evaluate(el=>el.inert),true);
+  await page.locator('#preferred-name').focus();
+  await page.keyboard.press('Shift+Tab');
+  assert.equal(await page.locator('#clear-name').evaluate(el=>el===document.activeElement),true);
+  await page.keyboard.press('Tab');
+  assert.equal(await page.locator('#preferred-name').evaluate(el=>el===document.activeElement),true);
+  await page.locator('#skip-name').click();
+  assert.equal(await page.locator('header').evaluate(el=>el.inert),false);
+  await page.reload();
+  assert.equal(await page.locator('#name-dialog').isVisible(),false);
+  await page.locator('#edit-name').click();
+  assert.equal(await page.locator('#name-dialog').isVisible(),true);
+  await page.keyboard.press('Escape');
+  assert.equal(await page.locator('#name-dialog').isVisible(),false);
+ }finally{await context.close()}
+});
+test('La nota consentida reaparece tras repetir la meditación y se puede borrar',async()=>{
+ const {context,page}=await openMobile();
+ try{
+  await page.locator('#skip-name').click();
+  await page.clock.install();
+  await page.getByRole('button',{name:/Entrar al Despertar 1/}).click();
+  await page.locator('#play').click();
+  await page.clock.fastForward(600_000);
+  await page.locator('#reflection').fill('Recordar esta sensación');
+  await page.locator('#local-consent').check();
+  await page.locator('#save-reflection').click();
+  await page.locator('#restart').click();
+  assert.equal(await page.locator('#reflection').inputValue(),'');
+  await page.clock.fastForward(600_000);
+  assert.equal(await page.locator('#reflection').inputValue(),'Recordar esta sensación');
+  assert.match(await page.locator('#save-status').textContent(),/recuperó tu nota/);
+  await page.locator('#erase-reflection').click();
+  assert.equal(await page.evaluate(()=>localStorage.getItem('elchaman.reflection.1.v1')),null);
+ }finally{await context.close()}
+});
