@@ -1,4 +1,4 @@
-name: El Chamán · Validación estática
+name: El Chamán · Validación funcional
 on:
   push:
     branches: [main, 'feat/**']
@@ -13,5 +13,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Validar HTML y secuencia temporal
+      - name: Validar estructura y fases
         run: node --test tests/smoke.test.mjs
+      - name: Instalar navegador de pruebas
+        run: |
+          npm install --no-save --no-audit --no-fund playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Probar flujo móvil y meditación
+        run: node --test tests/browser.test.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: el-chaman-captura-movil
+          path: screenshots/
+          if-no-files-found: ignore
