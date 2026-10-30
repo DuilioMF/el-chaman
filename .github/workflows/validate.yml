@@ -1,0 +1,17 @@
+name: El Chamán · Validación estática
+on:
+  push:
+    branches: [main, 'feat/**']
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validar HTML y secuencia temporal
+        run: node --test tests/smoke.test.mjs
