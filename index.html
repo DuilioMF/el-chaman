@@ -169,6 +169,7 @@ p{line-height:1.8}
 (function(){
 const $=id=>document.getElementById(id);
 const NAME_KEY='elchaman.preferredName.v1';
+const NAME_ASKED_KEY='elchaman.nameAsked.v1';
 const NOTE_KEY='elchaman.reflection.1.v1';
 const TOTAL=600;
 const stages=[
@@ -202,13 +203,14 @@ function greet(){
  $('greeting').textContent=name?'Qué bueno encontrarte, '+name+'. Este momento es tuyo. No hay nada que alcanzar.':'Un espacio para encontrarte con el presente, sin metas que alcanzar ni caminos obligatorios.';
 }
 function openName(){
- $('name-dialog').hidden=false;$('preferred-name').value=safeRead(NAME_KEY);
+ $('name-dialog').hidden=false;
+ document.querySelectorAll('header,main,footer').forEach(el=>{el.inert=true});$('preferred-name').value=safeRead(NAME_KEY);
  $('preferred-name').focus();
 }
-function closeName(){ $('name-dialog').hidden=true;$('edit-name').focus();greet(); }
-$('save-name').addEventListener('click',()=>{let name=$('preferred-name').value.trim();if(name){if(!safeWrite(NAME_KEY,name))alert('No fue posible guardar tu nombre en este navegador.');}closeName()});
-$('skip-name').addEventListener('click',closeName);
-$('clear-name').addEventListener('click',()=>{safeRemove(NAME_KEY);$('preferred-name').value='';closeName()});
+function closeName(){ $('name-dialog').hidden=true;document.querySelectorAll('header,main,footer').forEach(el=>{el.inert=false});$('edit-name').focus();greet(); }
+$('save-name').addEventListener('click',()=>{let name=$('preferred-name').value.trim();if(name){if(!safeWrite(NAME_KEY,name))alert('No fue posible guardar tu nombre en este navegador.');safeWrite(NAME_ASKED_KEY,'1');}closeName()});
+$('skip-name').addEventListener('click',()=>{safeWrite(NAME_ASKED_KEY,'1');closeName()});
+$('clear-name').addEventListener('click',()=>{safeRemove(NAME_KEY);safeWrite(NAME_ASKED_KEY,'1');$('preferred-name').value='';closeName()});
 $('edit-name').addEventListener('click',openName);
 $('preferred-name').addEventListener('keydown',e=>{if(e.key==='Enter')$('save-name').click()});
 function formatTime(s){const t=Math.floor(Math.max(0,s));return String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0')}
@@ -261,7 +263,9 @@ function pause(){
 }
 function finish(){
  pause();elapsed=TOTAL;completed=true;renderTime();$('after').hidden=false;
- $('save-status').textContent='La meditación terminó. El cuaderno es opcional y no tiene límite de tiempo.';
+ const savedNote=safeRead(NOTE_KEY);
+ $('reflection').value=savedNote;
+ $('save-status').textContent=savedNote?'Se recuperó tu nota de este navegador. Podés editarla o borrarla.':'La meditación terminó. El cuaderno es opcional y no tiene límite de tiempo.';
 }
 function tick(){
  if(!running)return;elapsed=Math.min(TOTAL,(performance.now()-startedAt)/1000);
@@ -297,9 +301,19 @@ $('erase-reflection').addEventListener('click',()=>{safeRemove(NOTE_KEY);$('refl
 $('skip-reflection').addEventListener('click',exit);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)pause()});
 window.addEventListener('pagehide',()=>{pause();if(audioContext){oscillators.forEach(o=>{try{o.stop()}catch(_){}});audioContext.close().catch(()=>{})}});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('name-dialog').hidden)closeName()});
+document.addEventListener('keydown',e=>{
+ if($('name-dialog').hidden)return;
+ if(e.key==='Escape'){e.preventDefault();closeName();return}
+ if(e.key==='Tab'){
+  const items=[...$('name-dialog').querySelectorAll('input:not([disabled]),button:not([disabled])')];
+  if(!items.length)return;
+  const first=items[0],last=items.at(-1);
+  if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}
+  else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}
+ }
+});
 renderCatalog();updateStage(true);renderTime();greet();
-if(!safeRead(NAME_KEY))openName();
+if(!safeRead(NAME_KEY)&&!safeRead(NAME_ASKED_KEY))openName();
 })();
 </script>
 </body></html>
