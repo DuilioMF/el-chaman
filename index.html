@@ -20,7 +20,7 @@ a{color:var(--accent)}
 header{display:flex;align-items:center;justify-content:space-between;gap:14px;max-width:1200px;margin:auto;padding:17px 20px}
 .brand{display:flex;align-items:center;gap:11px;text-decoration:none;color:var(--ink);letter-spacing:.22em;font-size:12px;font-weight:800}
 .brand-icon{width:42px;height:42px;border:1px solid #ec9b4988;border-radius:50%;display:grid;place-items:center;color:var(--accent);font:30px Georgia,serif;box-shadow:0 0 30px #ec9b4924}
-.back{font-size:12px;text-decoration:none;border:1px solid var(--line);padding:10px 12px}
+.back{font-size:12px;text-decoration:none;border:1px solid var(--line);padding:10px 12px}.close{color:var(--ink);font-size:23px;line-height:1;text-decoration:none;border:1px solid var(--line);width:38px;height:38px;display:grid;place-items:center}
 button.line,.action{color:var(--ink);border:1px solid var(--line);background:#1f1712cf;padding:12px 17px;border-radius:4px}
 button.line:hover,.action:hover{border-color:var(--accent);background:#362116}
 button.primary{background:#dd8c3b;color:#100b08;border:1px solid #f9b56e;font-weight:750;border-radius:4px;padding:13px 18px}
@@ -100,6 +100,7 @@ p{line-height:1.8}
 </head>
 <body>
 <header>
+<a class="close" href="https://duiliomf.github.io/doinglio/" aria-label="Cerrar El Chamán y volver a DoingLio">×</a>
 <a class="brand" href="https://duiliomf.github.io/doinglio/" aria-label="Ir a DoingLio"><span class="brand-icon">✦</span><span>DOINGLIO · EL CHAMÁN</span></a>
 <a class="back" href="https://duiliomf.github.io/doinglio/">← Volver a DoingLio</a>
 </header>
@@ -285,7 +286,7 @@ $('exit').addEventListener('click',exit);
 $('voice-enabled').addEventListener('change',()=>{if(!$('voice-enabled').checked)cancelVoice();else if(running)updateStage(true)});
 $('ambient-enabled').addEventListener('change',()=>{if(running)resumeAmbient();ambientLevel()});
 $('ambient-volume').addEventListener('input',ambientLevel);
-$('voice-volume').addEventListener('input',()=>{if(!$('voice-enabled').value)cancelVoice()});
+$('voice-volume').addEventListener('input',()=>{if(running&&$('voice-enabled').checked)updateStage(true)});
 $('save-reflection').addEventListener('click',()=>{
  if(!$('local-consent').checked){$('save-status').textContent='Marcá la confirmación antes de guardar.';return}
  const value=$('reflection').value.trim();
