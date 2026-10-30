@@ -24,7 +24,8 @@ El cuaderno sucede **después**, fuera de los 600 segundos.
 - Reloj con performance.now() para limitar el drift; pausa, reanuda, repite y sale.
 - Voz opcional del navegador mediante Web Speech API; idioma español si existe una voz.
 - Ambiente original sintetizado localmente mediante Web Audio API y controles separados.
-- Bienvenida/nombre y cuaderno local **solo en este navegador**, con confirmación antes de guardar el cuaderno.
+- Bienvenida/nombre y cuaderno local **solo en este navegador**, con confirmación antes de guardar el cuaderno. Si una persona omite el nombre, no se vuelve a solicitar al recargar. El cuaderno recupera la última nota local, admite editar y borrar.
+- El diálogo de bienvenida contiene el foco de teclado y bloquea la navegación de fondo mientras está abierto.
 - Si el navegador no admite voz/audio, la meditación sigue visualmente y con texto.
 
 ## Limitaciones importantes, pendientes del ticket #100
@@ -36,7 +37,13 @@ El cuaderno sucede **después**, fuera de los 600 segundos.
 - Despertar 2 está definido aparte en Trello #101 y **no se publica** con este MVP.
 
 ## Pruebas automáticas
-Con Node 22+: node --test tests/smoke.test.mjs.
+Con Node 22+: `node --test tests/smoke.test.mjs` (5 casos). En GitHub Actions, Chromium + Playwright ejecuta `node --test tests/browser.test.mjs` (6 casos): bienvenida, foco accesible, layout móvil, cronómetro virtual, consentimiento, recuperación y borrado del cuaderno.
+
+**Evidencia CI 30/10/2026:** https://github.com/DuilioMF/el-chaman/actions/runs/41107716077 (11 pruebas automáticas exitosas). El cronómetro se aceleró en el navegador; la prueba no valida diez minutos reales de voz y audio.
+
+Integración madre en PR #18 de DoingLio: https://github.com/DuilioMF/doinglio/pull/18 ; regresión de enlaces de los cuatro especialistas: https://github.com/DuilioMF/doinglio/actions/runs/41107841044 (exitosa).
+
+No confundir CI automatizada con revisión independiente, seguridad de datos por usuario ni aprobación CE-1.
 
 ## Trazabilidad
 - Trello #100: https://trello.com/c/GhvqpAC6
