@@ -16,11 +16,16 @@ jobs:
         run: |
           node --input-type=module <<'NODE'
           import assert from 'node:assert/strict';
-          const response = await fetch(process.env.PREVIEW_URL, {redirect:'follow', signal:AbortSignal.timeout(18000)});
+          let response, page='';
+          for (let attempt=1; attempt<=16; attempt++) {
+            response=await fetch(process.env.PREVIEW_URL+'?check='+attempt+'&sha='+process.env.GITHUB_SHA, {redirect:'follow', signal:AbortSignal.timeout(18000)});
+            page=await response.text();
+            if(response.status===200 && page.includes('name="robots" content="noindex, nofollow"')) break;
+            await new Promise(resolve=>setTimeout(resolve,5000));
+          }
           assert.equal(response.status, 200, 'TEST GitHub Pages must respond 200');
           assert.match(response.headers.get('content-type')||'', /text\/html/i);
-          assert.equal(response.headers.get('x-robots-tag'), 'noindex, nofollow');
-          const page = await response.text();
+          assert.ok(page.includes('name="robots" content="noindex, nofollow"'), 'TEST preview must not be indexed');
           assert.ok(page.includes('EL CHAMÁN · TEST #100'));
           assert.ok(page.includes('chaman_access'));
           assert.ok(page.includes('signInWithOtp'));
