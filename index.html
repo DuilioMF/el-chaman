@@ -163,9 +163,9 @@ p{line-height:1.8}
 <span class="top-tag">El momento continúa, sin reloj</span><h3>Cuaderno de los Despertares</h3>
 <p>¿Qué te quedó resonando? Podés escribir, quedarte en silencio o salir. No existe una respuesta correcta.</p>
 <textarea id="reflection" placeholder="Una palabra, una sensación, una pregunta…"></textarea>
-<label><input type="checkbox" id="local-consent"> Entiendo que, si guardo esta nota, quedará solo en este navegador y no estará protegida por una cuenta. No usar en dispositivos compartidos.</label>
-<div class="buttons"><button type="button" class="primary" id="save-reflection">Guardar en este navegador</button><button type="button" class="line" id="skip-reflection">No guardar / Volver</button><button type="button" class="line" id="erase-reflection">Borrar nota guardada</button></div>
-<p class="small-print" id="save-status" role="status">La sincronización privada entre dispositivos requiere autenticación y todavía no está disponible.</p>
+<label><input type="checkbox" id="local-consent"> Acepto guardar mi nota en el medio de almacenamiento informado para esta sesión.</label>
+<div class="buttons"><button type="button" class="primary" id="save-reflection">Guardar nota</button><button type="button" class="line" id="skip-reflection">No guardar / Volver</button><button type="button" class="line" id="erase-reflection">Borrar nota guardada</button></div>
+<p class="small-print" id="save-status" role="status">Para recuperar tus notas entre dispositivos, iniciá sesión en tu cuenta privada.</p>
 </div>
 </section>
 </main>
@@ -173,7 +173,7 @@ p{line-height:1.8}
 <div class="dialog-overlay" id="name-dialog" hidden>
 <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="name-title">
 <span class="top-tag">Primera bienvenida</span><h2 id="name-title">¿Cómo querés que te llame?</h2>
-<p class="muted">Tu nombre elegido se recuerda solo en este navegador. Podés cambiarlo o borrarlo cuando quieras.</p>
+<p class="muted">Podés cambiar o borrar el nombre cuando quieras. En la web, se guarda de forma privada en tu cuenta.</p>
 <label for="preferred-name">Nombre elegido</label>
 <input id="preferred-name" type="text" maxlength="48" autocomplete="nickname" placeholder="Tu nombre">
 <div class="buttons"><button type="button" class="primary" id="save-name">Guardar en este navegador</button><button type="button" class="line" id="skip-name">Omitir</button><button type="button" class="line" id="clear-name">Borrar nombre</button></div>
