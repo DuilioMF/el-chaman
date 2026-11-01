@@ -229,10 +229,9 @@ async function applySecureSession(session){
 async function initSecure(){
  safeRemove(NAME_KEY);safeRemove(NAME_ASKED_KEY);safeRemove(NOTE_KEY);
  $('name-dialog').querySelector('.muted').textContent='Tu nombre se guardará en tu cuenta privada y se recuperará en tus otros dispositivos.';
- document.querySelector('#after label').textContent='';
  const consent=document.querySelector('#after label');
  const tickbox=$('local-consent');
- consent.append(tickbox,document.createTextNode(' Acepto guardar esta reflexión en mi Cuaderno privado asociado a mi cuenta. Podré editarla o borrarla.'));
+ consent.replaceChildren(tickbox,document.createTextNode(' Acepto guardar esta reflexión en mi Cuaderno privado asociado a mi cuenta. Podré editarla o borrarla.'));
  $('save-reflection').textContent='Guardar en mi Cuaderno privado';
  $('save-status').textContent='Iniciá sesión para guardar y recuperar reflexiones privadas.';
  try{
