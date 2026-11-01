@@ -135,38 +135,47 @@ test('La nota consentida reaparece tras repetir la meditación y se puede borrar
  }finally{await context.close()}
 });
 
-test('Modo seguro: sesión y cuaderno privado no escriben datos personales en localStorage',async()=>{
+
+test('OTP: pendiente hasta que active=true; no muestra el Despertar ni guarda datos sin permiso',async()=>{
  const context=await browser.newContext({viewport:{width:390,height:844}});
  const page=await context.newPage();
  try{
   await page.route('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.8/+esm',route=>
-   route.fulfill({status:200,contentType:'text/javascript',headers:{'access-control-allow-origin':'*'},body:"\nexport function createClient(){\n let session=null,profile=null,note=null;const subscribers=[];\n function notify(){subscribers.forEach(fn=>fn('SIGNED_IN',session))}\n function builder(table){\n   const q={\n    eq(){return q},\n    maybeSingle:async()=>({data:table==='chaman_profiles'?profile:note,error:null})\n   };\n   return {\n     select:()=>q,\n     upsert:async data=>{if(table==='chaman_profiles')profile=data;else note=data;return {error:null}},\n     delete:()=>({eq:()=>({eq:async()=>{note=null;return {error:null}}})})\n   }\n }\n return {\n  from:builder,\n  auth:{\n   getSession:async()=>({data:{session},error:null}),\n   getUser:async()=>({data:{user:session?.user||null},error:null}),\n   onAuthStateChange:fn=>{subscribers.push(fn);return {data:{subscription:{unsubscribe(){}}}}},\n   signInWithPassword:async()=>{session={user:{id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',email:'qa@example.com'}};notify();return {error:null}},\n   signUp:async()=>({data:{session:null},error:null}),\n   signOut:async()=>{session=null;notify();return {error:null}}\n  }\n }\n}"}));
+   route.fulfill({status:200,contentType:'text/javascript',headers:{'access-control-allow-origin':'*'},body:"\nexport function createClient(){\n let session=null,access=null,profile=null,note=null;\n const subscribers=[];\n window.__chamanApproveForTest=()=>{if(access)access.active=true};\n function notify(){for(const fn of subscribers)fn('SIGNED_IN',session)}\n function builder(table){\n  const current=()=>table==='chaman_access'?access:table==='chaman_profiles'?profile:note;\n  const query={\n   eq(){return query},\n   maybeSingle:async()=>({data:current(),error:null}),\n   single:async()=>({data:current(),error:null})\n  };\n  return {\n   select:()=>query,\n   insert:row=>{\n    if(table==='chaman_access')access=row;\n    return {select:()=>query}\n   },\n   upsert:async row=>{if(table==='chaman_profiles')profile=row;else note=row;return {error:null}},\n   delete:()=>({eq:()=>({eq:async()=>{note=null;return {error:null}}})})\n  };\n }\n return {\n  from:builder,\n  auth:{\n   getSession:async()=>({data:{session},error:null}),\n   getUser:async()=>({data:{user:session?.user||null},error:null}),\n   onAuthStateChange:fn=>{subscribers.push(fn);return {data:{subscription:{unsubscribe(){}}}}},\n   signInWithOtp:async()=>{session={user:{id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',email:'qa@example.com'}};notify();return {error:null}},\n   signOut:async()=>{session=null;notify();return {error:null}}\n  }\n }\n}\n"}));
   await page.goto(origin+'/?secure-test=1');
-  await page.waitForFunction(()=>document.querySelector('#auth-status').textContent.includes('Sin sesión'));
+  await page.waitForFunction(()=>document.querySelector('#auth-status').textContent.includes('Ingresá con tu correo'));
   assert.equal(await page.locator('#name-dialog').isVisible(),false);
+  assert.equal(await page.locator('#despertares').isVisible(),false);
   await page.locator('#auth-email').fill('qa@example.com');
-  await page.locator('#auth-password').fill('test-password');
   await page.locator('#auth-login').click();
+  await page.waitForFunction(()=>document.querySelector('#auth-status').textContent.includes('pendiente'));
+  assert.equal(await page.locator('#name-dialog').isVisible(),false);
+  assert.equal(await page.locator('#despertares').isVisible(),false);
+  assert.equal(await page.locator('#auth-recheck').isVisible(),true);
+  assert.equal(await page.evaluate(()=>localStorage.getItem('elchaman.reflection.1.v1')),null);
+  await page.evaluate(()=>window.__chamanApproveForTest());
+  await page.locator('#auth-recheck').click();
   await page.locator('#name-dialog').waitFor({state:'visible'});
-  await page.locator('#preferred-name').fill('Prueba segura');
+  await page.locator('#preferred-name').fill('Persona autorizada');
   await page.locator('#save-name').click();
-  await page.waitForFunction(()=>document.querySelector('#greeting').textContent.includes('Prueba segura'));
+  await page.waitForFunction(()=>document.querySelector('#greeting').textContent.includes('Persona autorizada'));
+  assert.equal(await page.locator('#despertares').isVisible(),true);
   assert.equal(await page.evaluate(()=>localStorage.getItem('elchaman.preferredName.v1')),null);
   await page.clock.install();
   await page.getByRole('button',{name:/Entrar al Despertar 1/}).click();
   await page.locator('#play').click();
   await page.clock.fastForward(600_000);
   await page.locator('#after').waitFor({state:'visible'});
-  await page.locator('#reflection').fill('Solo en la cuenta');
+  await page.locator('#reflection').fill('Solo en mi cuenta');
   await page.locator('#local-consent').check();
   await page.locator('#save-reflection').click();
   await page.waitForFunction(()=>document.querySelector('#save-status').textContent.includes('Reflexión guardada'));
   assert.equal(await page.evaluate(()=>localStorage.getItem('elchaman.reflection.1.v1')),null);
   await page.locator('#erase-reflection').click();
   await page.waitForFunction(()=>document.querySelector('#save-status').textContent.includes('eliminada'));
-  assert.equal(await page.locator('#reflection').inputValue(),'');
   await page.locator('#auth-logout').click();
-  await page.waitForFunction(()=>document.querySelector('#auth-status').textContent.includes('Sin sesión'));
-  assert.doesNotMatch(await page.locator('#greeting').textContent(),/Prueba segura/);
+  await page.waitForFunction(()=>document.querySelector('#auth-status').textContent.includes('Ingresá con tu correo'));
+  assert.equal(await page.locator('#despertares').isVisible(),false);
+  assert.doesNotMatch(await page.locator('#greeting').textContent(),/Persona autorizada/);
  }finally{await context.close()}
 });
