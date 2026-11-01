@@ -1,54 +1,51 @@
 # El Chamán — DoingLio
 
-**El arte de vivir a tu manera.** Especialista independiente de DoingLio.
+**El arte de vivir a tu manera.** Cuarto especialista de DoingLio, independiente de los demás repositorios.
 
-## Estado
-Prototipo funcional de frontend en TEST: rama feat/chaman-despertar-1. **No publicar en producción hasta completar pruebas reales, aprobación explícita del usuario y gate CE-1.**
+## Estado — 0.2.0-test (1 de noviembre de 2026)
+
+Rama de prueba `feat/chaman-despertar-1`, PR #1: https://github.com/DuilioMF/el-chaman/pull/1
+
+**No fusionado ni publicado en producción.** La tarjeta #100 se cierra solo tras QA independiente en TEST, revisión del usuario y gate CE-1. Integración madre en https://github.com/DuilioMF/doinglio/pull/18, igualmente en borrador.
 
 ## Despertar 1 — Aprender a estar presente
-Experiencia de 10:00 minutos (600 s) con seis momentos:
-| Momento | Desde | Hasta |
-|---|---|---|
-| Umbral | 00:00 | 00:45 |
-| Anclaje corporal | 00:45 | 02:15 |
-| Reconocer la búsqueda | 02:15 | 04:15 |
-| Pregunta central | 04:15 | 06:45 |
-| Resonancia/silencio | 06:45 | 08:45 |
-| Integración | 08:45 | 10:00 |
 
-El cuaderno sucede **después**, fuera de los 600 segundos.
+Meditación libre de 10:00 minutos (600 s), con seis fases:
+- 00:00–00:45 Umbral (45 s).
+- 00:45–02:15 Anclaje corporal (90 s).
+- 02:15–04:15 Reconocer la búsqueda (120 s).
+- 04:15–06:45 Pregunta central (150 s).
+- 06:45–08:45 Resonancia y silencio (120 s).
+- 08:45–10:00 Integración (75 s).
 
-## Qué funciona en este prototipo
-- Interfaz móvil y escritorio, universo/rostro abstracto CSS, respeto a prefers-reduced-motion.
-- Catálogo basado en datos con Despertar 1 (no crea Despertares ficticios).
-- Reloj con performance.now() para limitar el drift; pausa, reanuda, repite y sale.
-- Voz opcional del navegador mediante Web Speech API; idioma español si existe una voz.
-- Ambiente original sintetizado localmente mediante Web Audio API y controles separados.
-- Bienvenida/nombre y cuaderno local **solo en este navegador**, con confirmación antes de guardar el cuaderno. Si una persona omite el nombre, no se vuelve a solicitar al recargar. El cuaderno recupera la última nota local, admite editar y borrar.
-- El diálogo de bienvenida contiene el foco de teclado y bloquea la navegación de fondo mientras está abierto.
-- Si el navegador no admite voz/audio, la meditación sigue visualmente y con texto.
+El Cuaderno empieza **después** de los 600 segundos, opcional, sin tiempo límite.
 
-## Limitaciones importantes, pendientes del ticket #100
-- Todavía **no** hay autenticación, aislamiento por usuario, sincronización entre dispositivos ni almacenamiento remoto seguro. No usar el cuaderno en dispositivos compartidos.
-- La voz del sistema depende del equipo; no hay aún pista de voz profesional pregrabada ni sincronización de subtítulos palabra por palabra.
-- No se han completado pruebas de reproducción real de 600 s, accesibilidad móvil con usuarios, compatibilidad de browsers ni test independiente.
-- La dirección GitHub Pages no constituye un despliegue confirmado hasta que Pages esté habilitado y comprobado.
-- Es necesario verificar la publicación de la suite DoingLio y que el enlace de El Chamán resuelva correctamente.
-- Despertar 2 está definido aparte en Trello #101 y **no se publica** con este MVP.
+## Implementado en la rama
 
-## Pruebas automáticas
-Con Node 22+: `node --test tests/smoke.test.mjs` (5 casos). En GitHub Actions, Chromium + Playwright ejecuta `node --test tests/browser.test.mjs` (6 casos): bienvenida, foco accesible, layout móvil, cronómetro virtual, consentimiento, recuperación y borrado del cuaderno.
+- Rostro/universo CSS original, acceso móvil/escritorio y preferencias de movimiento reducido.
+- Catálogo extensible sin límite artificial; solo Despertar 1 publicado en datos.
+- Cronómetro de tiempo transcurrido, reproducir/pausar/reanudar/repetir/salir; voz opcional del navegador (Web Speech) y ambiente original Web Audio por separado.
+- **Modo web alojado:** inicio de sesión/registro con Supabase Auth; perfil de bienvenida y Cuaderno por usuario, edición y borrado, sin guardar notas en localStorage. El usuario puede meditar sin iniciar sesión, pero no guardar.
+- **Modo demo local (localhost / archivo):** mantiene almacenamiento local aislado para pruebas históricas; nunca se utiliza ese modo en un sitio alojado.
+- Base Supabase del ecosistema (`apqgrwudkfytwikrsivd`): tablas `public.chaman_profiles` y `public.chaman_reflections`, RLS activado, ocho políticas de propiedad por `auth.uid()`, permisos solo al rol autenticado. Migración aplicada: `chaman_private_accounts_and_journal`.
+- Cliente web con clave **publishable**; nunca se incorpora una service-role ni clave secreta al HTML.
 
-**Evidencia CI 30/10/2026:** https://github.com/DuilioMF/el-chaman/actions/runs/41107716077 (11 pruebas automáticas exitosas). El cronómetro se aceleró en el navegador; la prueba no valida diez minutos reales de voz y audio.
+## Validación efectuada
 
-Integración madre en PR #18 de DoingLio: https://github.com/DuilioMF/doinglio/pull/18 ; regresión de enlaces de los cuatro especialistas: https://github.com/DuilioMF/doinglio/actions/runs/41107841044 (exitosa).
+- Pruebas previas: cronómetro acelerado, controles, móvil, bienvenida y Cuaderno del prototipo local.
+- 01/11/2026: CI Chromium de la rama pasó, incluida simulación de inicio de sesión, guardado remoto, borrado y salida; evidencia https://github.com/DuilioMF/el-chaman/actions/runs/41277061528
+- 01/11/2026: prueba transaccional de RLS con dos identidades existentes; filas cruzadas no visibles, actualización cruzada bloqueada, rollback sin datos de prueba persistidos.
+- Evidencia de integración DoingLio (PR #18) conserva los enlaces y nodos de los otros especialistas.
 
-No confundir CI automatizada con revisión independiente, seguridad de datos por usuario ni aprobación CE-1.
+## Pendientes antes de aprobación
 
-## Trazabilidad
-- Trello #100: https://trello.com/c/GhvqpAC6
-- Repositorio: https://github.com/DuilioMF/el-chaman
-- Suite padre: https://github.com/DuilioMF/doinglio
+1. Probar con cuenta real, registro/confirmación por correo y acceso con la misma cuenta desde dos dispositivos. Los tests de interfaz remota usan un cliente simulado; no equivalen a prueba integral real.
+2. Acreditar voz/subtítulos en dispositivos, audio sin cortes y los diez minutos *reales*, sin reloj virtual.
+3. Revisar privacidad y accesibilidad con tester independiente en un despliegue TEST cuya URL funcione. GitHub Pages no ha sido acreditado como desplegado.
+4. Revisión humana, aprobación explícita CE-1; **después** fusionar PR #1 y PR #18 y verificar DoingLio en producción.
 
-## Criterio de cierre
-PR revisado; test independiente en entorno de prueba, privacidad y accesibilidad validadas, URL real verificada; aprobación explícita y CE-1. Sin evidencia, mantener en desarrollo.
+## Desarrollo
+
+`node --test tests/smoke.test.mjs` valida estructura. Con Playwright, `node --test tests/browser.test.mjs` valida UI local y el modo seguro con Supabase simulado. La variante de prueba segura se habilita **solo en localhost** con `?secure-test=1`. No es un bypass disponible en producción.
+
+Trello #100: https://trello.com/c/GhvqpAC6 — Despertar 2 es independiente (#101): https://trello.com/c/3IHFHYHQ
