@@ -80,6 +80,10 @@ p{line-height:1.8}
 .audio-grid legend{font-size:12px;color:var(--accent);padding:0 8px}
 .audio-grid label{display:flex;align-items:center;gap:8px;font-size:13px}
 .audio-grid input[type=range]{width:100%;margin:16px 0 3px}
+.account-form{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;max-width:490px}
+.account-form input{min-width:0;padding:12px;border:1px solid var(--line);background:#100d0b;color:var(--ink)}
+.account-form label{font-size:13px;color:var(--muted)}
+.account-form .buttons{margin:5px 0}
 .journal{border:1px solid var(--line);padding:25px;background:#17110e}
 .journal textarea{display:block;width:100%;min-height:120px;resize:vertical;background:#080707;color:#f5e5d1;padding:15px;border:1px solid var(--line);border-radius:4px;margin:14px 0}
 .journal label{font-size:12px;color:var(--muted)}
@@ -117,6 +121,17 @@ p{line-height:1.8}
 <div class="halo"></div><div class="cosmos"><div class="face"><span class="eye left"></span><span class="eye right"></span><span class="nose"></span><span class="mouth"></span></div></div>
 <div class="orbital-label">El universo nos acompaña</div>
 </div>
+</section>
+<section class="section" id="cuenta" aria-labelledby="account-title">
+<span class="top-tag">Cuaderno privado</span><h2 id="account-title">Tu espacio, tu cuenta</h2>
+<p class="muted">Podés meditar sin iniciar sesión. Para guardar tu nombre y tus reflexiones en privado y recuperarlos desde otros dispositivos, iniciá sesión.</p>
+<form id="auth-form" class="account-form" autocomplete="on">
+<label for="auth-email">Correo electrónico</label><input type="email" id="auth-email" autocomplete="email" required placeholder="tu@correo.com">
+<label for="auth-password">Contraseña (mínimo 6 caracteres)</label><input type="password" id="auth-password" minlength="6" autocomplete="current-password" required>
+<div class="buttons"><button class="primary" id="auth-login" type="submit">Entrar</button><button type="button" class="line" id="auth-signup">Crear cuenta</button></div>
+</form>
+<div id="signed-in" hidden><p id="signed-in-label"></p><button type="button" class="line" id="auth-logout">Cerrar sesión</button></div>
+<p id="auth-status" class="small-print" role="status" aria-live="polite">Preparando el acceso seguro…</p>
 </section>
 <section class="section" id="despertares">
 <span class="top-tag">Elegí tu momento</span>
@@ -171,6 +186,79 @@ const $=id=>document.getElementById(id);
 const NAME_KEY='elchaman.preferredName.v1';
 const NAME_ASKED_KEY='elchaman.nameAsked.v1';
 const NOTE_KEY='elchaman.reflection.1.v1';
+const TEST_DEMO=['localhost','127.0.0.1'].includes(location.hostname)||location.protocol==='file:';
+let remoteClient=null,secureUser=null,secureName='',secureAsked=false;
+const PUBLIC_API_URL='https://apqgrwudkfytwikrsivd.supabase.co';
+const PUBLIC_API_KEY="sb_publishable_B9NdjnzOKu9BhZGmTM6LGg_wDB3n8lY";
+const showAuth=message=>{$('auth-status').textContent=message};
+function nameState(){return TEST_DEMO?safeRead(NAME_KEY):secureName}
+async function saveSecureName(value,asked=true){
+ if(!secureUser||!remoteClient){showAuth('Iniciá sesión para guardar tu nombre.');return false}
+ const {error}=await remoteClient.from('chaman_profiles').upsert({
+  user_id:secureUser.id,preferred_name:value,name_asked:asked,updated_at:new Date().toISOString()
+ },{onConflict:'user_id'});
+ if(error){showAuth('No se pudo guardar tu nombre: '+error.message);return false}
+ secureName=value;secureAsked=asked;greet();return true;
+}
+async function loadSecureNote(){
+ if(!secureUser||!remoteClient)return;
+ const user=secureUser.id;
+ const {data,error}=await remoteClient.from('chaman_reflections').select('content').eq('user_id',user).eq('awakening_id',1).maybeSingle();
+ if(secureUser?.id!==user)return;
+ if(error){$('save-status').textContent='No se pudo recuperar la nota.';return}
+ $('reflection').value=data?.content||'';
+ $('save-status').textContent=data?'Se recuperó tu nota privada. Podés editarla o borrarla.':'El Cuaderno es opcional; solo tu cuenta puede leer lo que guardes.';
+}
+async function applySecureSession(session){
+ let nextUser=null;
+ if(session?.user){const {data,error}=await remoteClient.auth.getUser();if(!error)nextUser=data?.user||null}
+ if(secureUser?.id!==nextUser?.id){pause();$('reflection').value='';$('after').hidden=true}
+ secureUser=nextUser;secureName='';secureAsked=false;
+ $('auth-form').hidden=Boolean(nextUser);$('signed-in').hidden=!nextUser;
+ $('signed-in-label').textContent=nextUser?'Sesión de '+(nextUser.email||'tu cuenta'):'';
+ if(!nextUser){showAuth('Sin sesión: podés meditar; para guardar tu Cuaderno, entrá con tu cuenta.');greet();return}
+ const {data,error}=await remoteClient.from('chaman_profiles').select('preferred_name,name_asked').eq('user_id',nextUser.id).maybeSingle();
+ if(error){showAuth('No se pudo leer tu perfil privado: '+error.message);return}
+ secureName=data?.preferred_name||'';secureAsked=Boolean(data?.name_asked);
+ showAuth('Sesión iniciada. Tus datos se guardan con permisos privados por cuenta.');
+ greet();
+ if(!secureAsked&&!$('name-dialog').hidden)closeName();
+ if(!secureAsked)openName();
+ if(!$('after').hidden)void loadSecureNote();
+}
+async function initSecure(){
+ safeRemove(NAME_KEY);safeRemove(NAME_ASKED_KEY);safeRemove(NOTE_KEY);
+ $('name-dialog').querySelector('.muted').textContent='Tu nombre se guardará en tu cuenta privada y se recuperará en tus otros dispositivos.';
+ document.querySelector('#after label').textContent='';
+ const consent=document.querySelector('#after label');
+ const tickbox=$('local-consent');
+ consent.append(tickbox,document.createTextNode(' Acepto guardar esta reflexión en mi Cuaderno privado asociado a mi cuenta. Podré editarla o borrarla.'));
+ $('save-reflection').textContent='Guardar en mi Cuaderno privado';
+ $('save-status').textContent='Iniciá sesión para guardar y recuperar reflexiones privadas.';
+ try{
+  const {createClient}=await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.8/+esm');
+  remoteClient=createClient(PUBLIC_API_URL,PUBLIC_API_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
+  const {data,error}=await remoteClient.auth.getSession();if(error)throw error;
+  await applySecureSession(data.session);
+  remoteClient.auth.onAuthStateChange((_event,s)=>{setTimeout(()=>{void applySecureSession(s)},0)});
+ }catch(error){showAuth('No se pudo conectar el servicio seguro: '+error.message)}
+}
+$('auth-form').addEventListener('submit',async e=>{
+ e.preventDefault();if(!remoteClient){showAuth('El servicio de cuentas no está disponible.');return}
+ const email=$('auth-email').value.trim(),password=$('auth-password').value;
+ const {error}=await remoteClient.auth.signInWithPassword({email,password});
+ if(error)showAuth('No se pudo iniciar sesión: '+error.message);
+});
+$('auth-signup').addEventListener('click',async()=>{
+ if(!remoteClient){showAuth('El servicio de cuentas no está disponible.');return}
+ const email=$('auth-email').value.trim(),password=$('auth-password').value;
+ if(!email||password.length<6){showAuth('Ingresá un correo y una contraseña de al menos 6 caracteres.');return}
+ const {data,error}=await remoteClient.auth.signUp({email,password});
+ showAuth(error?'No se pudo crear la cuenta: '+error.message:data.session?'Cuenta creada e iniciada.':'Cuenta creada. Revisá tu correo para confirmar el registro y luego ingresá.');
+});
+$('auth-logout').addEventListener('click',async()=>{
+ if(remoteClient){const {error}=await remoteClient.auth.signOut();if(error)showAuth('No se pudo cerrar la sesión: '+error.message)}
+});
 const TOTAL=600;
 const stages=[
  {start:0,title:'El umbral',label:'01 / Umbral',prompt:'No necesitás demostrar nada para estar acá.',voice:'Qué bueno encontrarte. Este momento no tiene una meta. Si querés, simplemente quedate acá.'},
@@ -199,18 +287,19 @@ function renderCatalog(){
  });
 }
 function greet(){
- const name=safeRead(NAME_KEY).trim();
+ const name=nameState().trim();
  $('greeting').textContent=name?'Qué bueno encontrarte, '+name+'. Este momento es tuyo. No hay nada que alcanzar.':'Un espacio para encontrarte con el presente, sin metas que alcanzar ni caminos obligatorios.';
 }
 function openName(){
+ if(!TEST_DEMO&&!secureUser){$('cuenta').scrollIntoView({behavior:'smooth'});showAuth('Iniciá sesión antes de personalizar la bienvenida.');return}
  $('name-dialog').hidden=false;
- document.querySelectorAll('header,main,footer').forEach(el=>{el.inert=true});$('preferred-name').value=safeRead(NAME_KEY);
+ document.querySelectorAll('header,main,footer').forEach(el=>{el.inert=true});$('preferred-name').value=nameState();
  $('preferred-name').focus();
 }
 function closeName(){ $('name-dialog').hidden=true;document.querySelectorAll('header,main,footer').forEach(el=>{el.inert=false});$('edit-name').focus();greet(); }
-$('save-name').addEventListener('click',()=>{let name=$('preferred-name').value.trim();if(name){if(!safeWrite(NAME_KEY,name))alert('No fue posible guardar tu nombre en este navegador.');safeWrite(NAME_ASKED_KEY,'1');}closeName()});
-$('skip-name').addEventListener('click',()=>{safeWrite(NAME_ASKED_KEY,'1');closeName()});
-$('clear-name').addEventListener('click',()=>{safeRemove(NAME_KEY);safeWrite(NAME_ASKED_KEY,'1');$('preferred-name').value='';closeName()});
+$('save-name').addEventListener('click',async()=>{const name=$('preferred-name').value.trim().slice(0,80);if(TEST_DEMO){if(name){if(!safeWrite(NAME_KEY,name))alert('No fue posible guardar tu nombre en este navegador.');safeWrite(NAME_ASKED_KEY,'1')}closeName();return}if(await saveSecureName(name))closeName()});
+$('skip-name').addEventListener('click',async()=>{if(TEST_DEMO){safeWrite(NAME_ASKED_KEY,'1');closeName();return}if(await saveSecureName(secureName))closeName()});
+$('clear-name').addEventListener('click',async()=>{if(TEST_DEMO){safeRemove(NAME_KEY);safeWrite(NAME_ASKED_KEY,'1');$('preferred-name').value='';closeName();return}if(await saveSecureName('')){$('preferred-name').value='';closeName()}});
 $('edit-name').addEventListener('click',openName);
 $('preferred-name').addEventListener('keydown',e=>{if(e.key==='Enter')$('save-name').click()});
 function formatTime(s){const t=Math.floor(Math.max(0,s));return String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0')}
@@ -263,9 +352,10 @@ function pause(){
 }
 function finish(){
  pause();elapsed=TOTAL;completed=true;renderTime();$('after').hidden=false;
- const savedNote=safeRead(NOTE_KEY);
+ const savedNote=TEST_DEMO?safeRead(NOTE_KEY):'';
  $('reflection').value=savedNote;
  $('save-status').textContent=savedNote?'Se recuperó tu nota de este navegador. Podés editarla o borrarla.':'La meditación terminó. El cuaderno es opcional y no tiene límite de tiempo.';
+ if(!TEST_DEMO){if(secureUser)void loadSecureNote();else $('save-status').textContent='Iniciá sesión para guardar una reflexión privada.'}
 }
 function tick(){
  if(!running)return;elapsed=Math.min(TOTAL,(performance.now()-startedAt)/1000);
@@ -291,13 +381,20 @@ $('voice-enabled').addEventListener('change',()=>{if(!$('voice-enabled').checked
 $('ambient-enabled').addEventListener('change',()=>{if(running)resumeAmbient();ambientLevel()});
 $('ambient-volume').addEventListener('input',ambientLevel);
 $('voice-volume').addEventListener('input',()=>{if(running&&$('voice-enabled').checked)updateStage(true)});
-$('save-reflection').addEventListener('click',()=>{
+$('save-reflection').addEventListener('click',async()=>{
  if(!$('local-consent').checked){$('save-status').textContent='Marcá la confirmación antes de guardar.';return}
  const value=$('reflection').value.trim();
  if(!value){$('save-status').textContent='Escribí algo primero, o elegí no guardar.';return}
- $('save-status').textContent=safeWrite(NOTE_KEY,value)?'Guardado solo en este navegador.':'No se pudo guardar en este navegador.';
+ if(TEST_DEMO){$('save-status').textContent=safeWrite(NOTE_KEY,value)?'Guardado solo en este navegador.':'No se pudo guardar en este navegador.';return}
+ if(!secureUser||!remoteClient){$('save-status').textContent='Iniciá sesión para guardar la reflexión.';return}
+ const user=secureUser.id;
+ const {error}=await remoteClient.from('chaman_reflections').upsert({user_id:user,awakening_id:1,content:value,updated_at:new Date().toISOString()},{onConflict:'user_id,awakening_id'});
+ $('save-status').textContent=error?'No se guardó: '+error.message:'Reflexión guardada en tu Cuaderno privado.';
 });
-$('erase-reflection').addEventListener('click',()=>{safeRemove(NOTE_KEY);$('reflection').value='';$('save-status').textContent='Nota local borrada.'});
+$('erase-reflection').addEventListener('click',async()=>{if(TEST_DEMO){safeRemove(NOTE_KEY);$('reflection').value='';$('save-status').textContent='Nota local borrada.';return}if(!secureUser||!remoteClient){$('save-status').textContent='Iniciá sesión para borrar tu nota privada.';return}
+ const {error}=await remoteClient.from('chaman_reflections').delete().eq('user_id',secureUser.id).eq('awakening_id',1);
+ if(error){$('save-status').textContent='No se pudo borrar: '+error.message;return}
+ $('reflection').value='';$('save-status').textContent='Reflexión privada eliminada.';});
 $('skip-reflection').addEventListener('click',exit);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)pause()});
 window.addEventListener('pagehide',()=>{pause();if(audioContext){oscillators.forEach(o=>{try{o.stop()}catch(_){}});audioContext.close().catch(()=>{})}});
@@ -313,7 +410,7 @@ document.addEventListener('keydown',e=>{
  }
 });
 renderCatalog();updateStage(true);renderTime();greet();
-if(!safeRead(NAME_KEY)&&!safeRead(NAME_ASKED_KEY))openName();
+if(TEST_DEMO){$('cuenta').hidden=true;if(!safeRead(NAME_KEY)&&!safeRead(NAME_ASKED_KEY))openName()}else{void initSecure()}
 })();
 </script>
 </body></html>
