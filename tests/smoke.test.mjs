@@ -30,9 +30,11 @@ test('Controles principales y accesibilidad están presentes',()=>{
  assert.match(html,/aria-live="polite"/);
  assert.match(html,/aria-label="Cerrar El Chamán/);
 });
-test('Privacidad: declara alcance local y no simula autenticación',()=>{
- assert.match(html,/no estará protegida por una cuenta/);
- assert.match(html,/sincronización privada entre dispositivos requiere autenticación/);
+test('El modo seguro preserva el consentimiento y no contiene secretos en HTML',()=>{
+ assert.match(script,/chaman_profiles/);
+ assert.match(script,/chaman_reflections/);
+ assert.match(script,/remoteClient\.auth\.getUser/);
+ assert.match(script,/TEST_DEMO/);
  assert.match(script,/local-consent/);
- assert.doesNotMatch(html,/supabase\.co\/auth/);
+ assert.doesNotMatch(html,/sb_secret_/);
 });
