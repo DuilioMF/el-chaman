@@ -1,0 +1,37 @@
+name: El Chamán · Comprobar despliegue TEST
+on:
+  push:
+    branches: ['feat/chaman-despertar-1']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  preview:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    steps:
+      - name: Verificar endpoint TEST, HTML y acceso cerrado por defecto
+        env:
+          PREVIEW_URL: https://doinglio.revalsoftia.com.ar/qa/chaman-100/
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          let response, page='';
+          for (let attempt=1; attempt<=16; attempt++) {
+            response=await fetch(process.env.PREVIEW_URL+'?check='+attempt+'&sha='+process.env.GITHUB_SHA, {redirect:'follow', signal:AbortSignal.timeout(18000)});
+            page=await response.text();
+            if(response.status===200 && page.includes('name="robots" content="noindex, nofollow"')) break;
+            await new Promise(resolve=>setTimeout(resolve,5000));
+          }
+          assert.equal(response.status, 200, 'TEST GitHub Pages must respond 200');
+          assert.match(response.headers.get('content-type')||'', /text\/html/i);
+          assert.ok(page.includes('name="robots" content="noindex, nofollow"'), 'TEST preview must not be indexed');
+          assert.ok(page.includes('EL CHAMÁN · TEST #100'));
+          assert.ok(page.includes('chaman_access'));
+          assert.ok(page.includes('signInWithOtp'));
+          assert.ok(page.includes('chaman-authorized'));
+          assert.ok(page.includes('active:false'));
+          assert.ok(!page.includes('sb_secret_'));
+          assert.ok(!page.includes('service_role'));
+          console.log('PAGES TEST OK: HTTP',response.status,'content-type HTML, autorización exigida, sin secretos');
+          NODE
