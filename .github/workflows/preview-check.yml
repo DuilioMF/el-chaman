@@ -1,0 +1,32 @@
+name: El Chamán · Comprobar despliegue TEST
+on:
+  push:
+    branches: ['feat/chaman-despertar-1']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  preview:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    steps:
+      - name: Verificar endpoint TEST, HTML y acceso cerrado por defecto
+        env:
+          PREVIEW_URL: https://apqgrwudkfytwikrsivd.supabase.co/functions/v1/chaman-preview-test-100
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          const response = await fetch(process.env.PREVIEW_URL, {redirect:'manual', signal:AbortSignal.timeout(18000)});
+          assert.equal(response.status, 200, 'TEST endpoint must respond 200');
+          assert.match(response.headers.get('content-type')||'', /text\/html/i);
+          assert.equal(response.headers.get('x-robots-tag'), 'noindex, nofollow');
+          const page = await response.text();
+          assert.ok(page.includes('EL CHAMÁN · VISTA DE PRUEBA'));
+          assert.ok(page.includes('chaman_access'));
+          assert.ok(page.includes('signInWithOtp'));
+          assert.ok(page.includes('chaman-authorized'));
+          assert.ok(page.includes('active:false'));
+          assert.ok(!page.includes('sb_secret_'));
+          assert.ok(!page.includes('service_role'));
+          console.log('TEST OK: HTTP',response.status,'content-type HTML, autorización exigida, sin secretos');
+          NODE
