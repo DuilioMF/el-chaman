@@ -186,7 +186,7 @@ const $=id=>document.getElementById(id);
 const NAME_KEY='elchaman.preferredName.v1';
 const NAME_ASKED_KEY='elchaman.nameAsked.v1';
 const NOTE_KEY='elchaman.reflection.1.v1';
-const TEST_DEMO=['localhost','127.0.0.1'].includes(location.hostname)||location.protocol==='file:';
+const TEST_DEMO=(['localhost','127.0.0.1'].includes(location.hostname)||location.protocol==='file:')&&!location.search.includes('secure-test=1');
 let remoteClient=null,secureUser=null,secureName='',secureAsked=false;
 const PUBLIC_API_URL='https://apqgrwudkfytwikrsivd.supabase.co';
 const PUBLIC_API_KEY="sb_publishable_B9NdjnzOKu9BhZGmTM6LGg_wDB3n8lY";
