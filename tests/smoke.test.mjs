@@ -33,6 +33,10 @@ test('Controles principales y accesibilidad están presentes',()=>{
 test('El modo seguro preserva el consentimiento y no contiene secretos en HTML',()=>{
  assert.match(script,/chaman_profiles/);
  assert.match(script,/chaman_reflections/);
+ assert.match(script,/chaman_access/);
+ assert.match(script,/signInWithOtp/);
+ assert.match(script,/record\?\.active/);
+ assert.doesNotMatch(script,/signInWithPassword/);
  assert.match(script,/remoteClient\.auth\.getUser/);
  assert.match(script,/TEST_DEMO/);
  assert.match(script,/local-consent/);
